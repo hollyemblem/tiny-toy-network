@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Iris NN: Weights, Biases, and Graph</title>
+    <style>
+      :root {
+        --bg: #f6f3ee;
+        --panel: #ffffff;
+        --ink: #1a1a1a;
+        --muted: #6b6b6b;
+        --accent: #b24c39;
+        --accent-2: #1f5f5b;
+        --grid: #e5dfd6;
+        --paper: #fffdf8;
+        --bias: #fff3e8;
+        --panel-header: #faf7f2;
+      }
+      .dark {
+        --bg: #121212;
+        --panel: #1a1a1a;
+        --ink: #f3f1ed;
+        --muted: #b2b0aa;
+        --accent: #e08b6d;
+        --accent-2: #6cb3a9;
+        --grid: #2a2a2a;
+        --paper: #1e1b17;
+        --bias: #2a1f18;
+        --panel-header: #1f1c18;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Serif", "Georgia", "Times New Roman", serif;
+        color: var(--ink);
+        background:
+          radial-gradient(1200px 600px at 10% 10%, #fff8e7 0%, transparent 60%),
+          radial-gradient(1000px 700px at 90% 20%, #f0f7f3 0%, transparent 60%),
+          linear-gradient(180deg, var(--bg) 0%, #f1ebe2 100%);
+      }
+      .dark body {
+        background:
+          radial-gradient(1200px 600px at 10% 10%, #2b2016 0%, transparent 60%),
+          radial-gradient(1000px 700px at 90% 20%, #1b2a28 0%, transparent 60%),
+          linear-gradient(180deg, #111111 0%, #0e0e0e 100%);
+      }
+      header {
+        position: relative;
+        padding: 32px 24px 8px;
+        text-align: center;
+      }
+      header h1 {
+        margin: 0;
+        font-size: clamp(24px, 3.5vw, 36px);
+        letter-spacing: 0.5px;
+      }
+      header p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-family: "IBM Plex Sans", "Helvetica", "Arial", sans-serif;
+        font-size: 14px;
+      }
+      main {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: repeat(2, minmax(300px, 1fr));
+        padding: 24px;
+        max-width: 1100px;
+        margin: 0 auto 32px;
+      }
+      @media (max-width: 760px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--grid);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: "IBM Plex Mono", "Courier New", monospace;
+        font-size: 13px;
+      }
+      th, td {
+        border: 1px solid var(--grid);
+        padding: 6px 8px;
+        text-align: center;
+      }
+      th {
+        background: var(--panel-header);
+      }
+      .note {
+        font-family: "IBM Plex Sans", "Helvetica", "Arial", sans-serif;
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .graph-wrap {
+        width: 100%;
+        overflow-x: auto;
+      }
+      .graph-card {
+        grid-column: 1 / -1;
+      }
+      svg {
+        width: 100%;
+        height: 520px;
+      }
+      .node {
+        fill: var(--paper);
+        stroke: var(--ink);
+        stroke-width: 1.5;
+      }
+      .edge {
+        stroke: var(--accent-2);
+        stroke-width: 2;
+        marker-end: url(#arrow);
+      }
+      .label {
+        font-family: "IBM Plex Sans", "Helvetica", "Arial", sans-serif;
+        font-size: 12px;
+        fill: var(--ink);
+      }
+      .layer {
+        font-family: "IBM Plex Sans", "Helvetica", "Arial", sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        fill: var(--accent);
+      }
+      .bias-box {
+        fill: var(--bias);
+        stroke: var(--accent);
+        stroke-width: 1.5;
+      }
+      .formula {
+        font-family: "IBM Plex Mono", "Courier New", monospace;
+        background: var(--bias);
+        border: 1px solid var(--grid);
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin-top: 12px;
+        font-size: 13px;
+      }
+      .controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 10px;
+        font-family: "IBM Plex Sans", "Helvetica", "Arial", sans-serif;
+      }
+      .header-controls {
+        position: absolute;
+        top: 16px;
+        right: 24px;
+        margin-top: 0;
+      }
+      .icon {
+        width: 14px;
+        height: 14px;
+        display: inline-block;
+        vertical-align: middle;
+        fill: var(--muted);
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .hidden {
+        display: none;
+      }
+      .btn {
+        border: 1px solid var(--accent);
+        background: var(--bias);
+        color: var(--ink);
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .grad-table td {
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Tiny Toy Network</h1>
+      <p>Creating a randomised fully connected network to practice back propagation.</p>
+      <div class="controls header-controls">
+        <label class="toggle">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21.5 14.5c-1.2.6-2.6.9-4 .9-4.4 0-8-3.6-8-8 0-1.4.3-2.8.9-4C6.6 4.5 4 7.9 4 12c0 4.4 3.6 8 8 8 4.1 0 7.5-2.6 9.5-5.5z"></path>
+          </svg>
+          <input type="checkbox" id="toggle-dark" />
+          dark mode
+        </label>
+      </div>
+    </header>
+    <main>
+      <section class="card">
+        <h2>Layer 1: FullyConnected(2 → 2)</h2>
+        <table aria-label="Layer 1 weights">
+          <thead>
+            <tr>
+              <th></th>
+              <th>h1</th>
+              <th>h2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>x1</th>
+              <td id="w1_00">0.10</td>
+              <td id="w1_01">-0.20</td>
+            </tr>
+            <tr>
+              <th>x2</th>
+              <td id="w1_10">0.40</td>
+              <td id="w1_11">0.20</td>
+            </tr>
+          </tbody>
+        </table>
+        <table aria-label="Layer 1 biases" style="margin-top: 10px;">
+          <thead>
+            <tr>
+              <th></th>
+              <th>h1</th>
+              <th>h2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>bias</th>
+              <td id="b1_0">0.00</td>
+              <td id="b1_1">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note">W1, b1 map x → z1 → h (sigmoid)</p>
+      </section>
+
+      <section class="card">
+        <h2>Layer 2: FullyConnected(2 → 2)</h2>
+        <table aria-label="Layer 2 weights">
+          <thead>
+            <tr>
+              <th></th>
+              <th>y1</th>
+              <th>y2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>h1</th>
+              <td id="w2_00">0.30</td>
+              <td id="w2_01">-0.10</td>
+            </tr>
+            <tr>
+              <th>h2</th>
+              <td id="w2_10">0.20</td>
+              <td id="w2_11">0.20</td>
+            </tr>
+          </tbody>
+        </table>
+        <table aria-label="Layer 2 biases" style="margin-top: 10px;">
+          <thead>
+            <tr>
+              <th></th>
+              <th>y1</th>
+              <th>y2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>bias</th>
+              <td id="b2_0">0.00</td>
+              <td id="b2_1">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note">W2, b2 map h → z2 (linear output)</p>
+      </section>
+
+      <section class="card graph-wrap graph-card">
+        <h2>Computational Graph</h2>
+        <svg viewBox="0 0 860 360" role="img" aria-label="Computational graph diagram">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 z" fill="#1f5f5b"></path>
+            </marker>
+          </defs>
+
+          <text x="60" y="40" class="layer">Input</text>
+          <text x="360" y="40" class="layer">Hidden (sigmoid)</text>
+          <text x="660" y="40" class="layer">Output</text>
+
+          <circle cx="80" cy="120" r="22" class="node"></circle>
+          <text x="72" y="125" class="label">x1</text>
+          <circle cx="80" cy="220" r="22" class="node"></circle>
+          <text x="72" y="225" class="label">x2</text>
+
+          <circle cx="380" cy="120" r="22" class="node"></circle>
+          <text x="372" y="125" class="label">h1</text>
+          <circle cx="380" cy="220" r="22" class="node"></circle>
+          <text x="372" y="225" class="label">h2</text>
+
+          <circle cx="680" cy="120" r="22" class="node"></circle>
+          <text x="672" y="125" class="label">y1</text>
+          <circle cx="680" cy="220" r="22" class="node"></circle>
+          <text x="672" y="225" class="label">y2</text>
+
+          <rect x="150" y="95" width="70" height="32" rx="6" class="bias-box"></rect>
+          <text x="158" y="116" class="label" id="bias_b1">b1=0.00</text>
+          <rect x="150" y="195" width="70" height="32" rx="6" class="bias-box"></rect>
+          <text x="158" y="216" class="label" id="bias_b2">b2=0.00</text>
+
+          <rect x="450" y="95" width="70" height="32" rx="6" class="bias-box"></rect>
+          <text x="458" y="116" class="label" id="bias_b3">b3=0.00</text>
+          <rect x="450" y="195" width="70" height="32" rx="6" class="bias-box"></rect>
+          <text x="458" y="216" class="label" id="bias_b4">b4=0.00</text>
+
+          <line x1="102" y1="120" x2="358" y2="120" class="edge"></line>
+          <line x1="102" y1="120" x2="358" y2="220" class="edge"></line>
+          <line x1="102" y1="220" x2="358" y2="120" class="edge"></line>
+          <line x1="102" y1="220" x2="358" y2="220" class="edge"></line>
+
+          <line x1="402" y1="120" x2="658" y2="120" class="edge"></line>
+          <line x1="402" y1="120" x2="658" y2="220" class="edge"></line>
+          <line x1="402" y1="220" x2="658" y2="120" class="edge"></line>
+          <line x1="402" y1="220" x2="658" y2="220" class="edge"></line>
+
+          <text x="210" y="110" class="label" id="g_w1_00">0.10</text>
+          <text x="210" y="210" class="label" id="g_w1_10">0.40</text>
+          <text x="210" y="145" class="label" id="g_w1_01">-0.20</text>
+          <text x="210" y="245" class="label" id="g_w1_11">0.20</text>
+
+          <text x="510" y="110" class="label" id="g_w2_00">0.30</text>
+          <text x="510" y="210" class="label" id="g_w2_10">0.20</text>
+          <text x="510" y="145" class="label" id="g_w2_01">-0.10</text>
+          <text x="510" y="245" class="label" id="g_w2_11">0.20</text>
+        </svg>
+        <p class="note">Edges are labeled with weights; biases are shown as separate nodes feeding each neuron.</p>
+        <div class="formula">
+          dL/dz2 = mse_prime(y_true, z2) = z2 - y_true
+        </div>
+        <div class="controls">
+          <button class="btn" id="randomize">Randomize weights/biases</button>
+          <button class="btn" id="compute-grads">Compute gradients (per sample)</button>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-error" checked />
+            show dL/dz2
+          </label>
+          <span class="note">Also refreshes y_true and z2 values.</span>
+        </div>
+        <table aria-label="Per-sample forward outputs and dL/dz2" style="margin-top: 10px;">
+          <thead>
+            <tr>
+              <th>sample</th>
+              <th>x1</th>
+              <th>x2</th>
+              <th>y_true (target)</th>
+              <th>z2 (output)</th>
+              <th class="error-col">dL/dz2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>0</td>
+              <td id="x_0_0">0.00</td>
+              <td id="x_0_1">0.00</td>
+              <td id="ytrue_0">[1, 0]</td>
+              <td id="yout_0">[0.28496, 0.13220]</td>
+              <td id="err_0" class="error-col">[-0.71504, 0.13220]</td>
+            </tr>
+            <tr>
+              <td>1</td>
+              <td id="x_1_0">0.00</td>
+              <td id="x_1_1">0.00</td>
+              <td id="ytrue_1">[1, 0]</td>
+              <td id="yout_1">[0.30508, 0.13681]</td>
+              <td id="err_1" class="error-col">[-0.69492, 0.13681]</td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="grad-table" aria-label="Per-sample gradients" style="margin-top: 10px;">
+          <thead>
+            <tr>
+              <th>sample</th>
+              <th>Layer 1 dL/dW (W1)</th>
+              <th>Layer 1 dL/db (b1)</th>
+              <th>Layer 2 dL/dW (W2)</th>
+              <th>Layer 2 dL/db (b2)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>0</td>
+              <td id="gw1_0">[[0,0],[0,0]]</td>
+              <td id="gb1_0">[0,0]</td>
+              <td id="gw2_0">[[0,0],[0,0]]</td>
+              <td id="gb2_0">[0,0]</td>
+            </tr>
+            <tr>
+              <td>1</td>
+              <td id="gw1_1">[[0,0],[0,0]]</td>
+              <td id="gb1_1">[0,0]</td>
+              <td id="gw2_1">[[0,0],[0,0]]</td>
+              <td id="gb2_1">[0,0]</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+    <script>
+      const state = {
+        params: null,
+        samples: [],
+      };
+
+      function randWeight() {
+        return (Math.random() - 0.5).toFixed(2);
+      }
+
+      function randInput() {
+        return (Math.random() * 2 - 1).toFixed(2);
+      }
+
+      function oneHot() {
+        return Math.random() < 0.5 ? [1, 0] : [0, 1];
+      }
+
+      function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = value;
+        }
+      }
+
+      function updateWeightsAndBiases() {
+        const w1 = [
+          [parseFloat(randWeight()), parseFloat(randWeight())],
+          [parseFloat(randWeight()), parseFloat(randWeight())],
+        ];
+        const w2 = [
+          [parseFloat(randWeight()), parseFloat(randWeight())],
+          [parseFloat(randWeight()), parseFloat(randWeight())],
+        ];
+        const b1 = [parseFloat(randWeight()), parseFloat(randWeight())];
+        const b2 = [parseFloat(randWeight()), parseFloat(randWeight())];
+
+        setText("w1_00", w1[0][0].toFixed(2));
+        setText("w1_01", w1[0][1].toFixed(2));
+        setText("w1_10", w1[1][0].toFixed(2));
+        setText("w1_11", w1[1][1].toFixed(2));
+        setText("w2_00", w2[0][0].toFixed(2));
+        setText("w2_01", w2[0][1].toFixed(2));
+        setText("w2_10", w2[1][0].toFixed(2));
+        setText("w2_11", w2[1][1].toFixed(2));
+        setText("b1_0", b1[0].toFixed(2));
+        setText("b1_1", b1[1].toFixed(2));
+        setText("b2_0", b2[0].toFixed(2));
+        setText("b2_1", b2[1].toFixed(2));
+
+        setText("g_w1_00", w1[0][0].toFixed(2));
+        setText("g_w1_01", w1[0][1].toFixed(2));
+        setText("g_w1_10", w1[1][0].toFixed(2));
+        setText("g_w1_11", w1[1][1].toFixed(2));
+        setText("g_w2_00", w2[0][0].toFixed(2));
+        setText("g_w2_01", w2[0][1].toFixed(2));
+        setText("g_w2_10", w2[1][0].toFixed(2));
+        setText("g_w2_11", w2[1][1].toFixed(2));
+
+        setText("bias_b1", "b1=" + b1[0].toFixed(2));
+        setText("bias_b2", "b2=" + b1[1].toFixed(2));
+        setText("bias_b3", "b3=" + b2[0].toFixed(2));
+        setText("bias_b4", "b4=" + b2[1].toFixed(2));
+
+        return { w1, w2, b1, b2 };
+      }
+
+      function sigmoid(x) {
+        return 1 / (1 + Math.exp(-x));
+      }
+
+      function sigmoidPrimeFromSigmoid(s) {
+        return s * (1 - s);
+      }
+
+      function forwardPass(x, params) {
+        const z1 = [
+          x[0] * params.w1[0][0] + x[1] * params.w1[1][0] + params.b1[0],
+          x[0] * params.w1[0][1] + x[1] * params.w1[1][1] + params.b1[1],
+        ];
+        const h = [sigmoid(z1[0]), sigmoid(z1[1])];
+        const z2 = [
+          h[0] * params.w2[0][0] + h[1] * params.w2[1][0] + params.b2[0],
+          h[0] * params.w2[0][1] + h[1] * params.w2[1][1] + params.b2[1],
+        ];
+        return { z1, h, z2 };
+      }
+
+      function updatePredictions(params) {
+        state.samples = [];
+        for (let i = 0; i < 2; i++) {
+          const yTrue = oneHot();
+          const x = [parseFloat(randInput()), parseFloat(randInput())];
+          const fp = forwardPass(x, params);
+          const yOut = fp.z2;
+          const err = [
+            (yOut[0] - yTrue[0]).toFixed(5),
+            (yOut[1] - yTrue[1]).toFixed(5),
+          ];
+          setText("x_" + i + "_0", x[0].toFixed(2));
+          setText("x_" + i + "_1", x[1].toFixed(2));
+          setText("ytrue_" + i, "[" + yTrue.join(", ") + "]");
+          setText("yout_" + i, "[" + yOut[0].toFixed(5) + ", " + yOut[1].toFixed(5) + "]");
+          setText("err_" + i, "[" + err.join(", ") + "]");
+          state.samples.push({
+            x,
+            yTrue,
+            z1: fp.z1,
+            h: fp.h,
+            z2: fp.z2,
+          });
+        }
+      }
+
+      function randomizeAll() {
+        const params = updateWeightsAndBiases();
+        state.params = params;
+        updatePredictions(params);
+      }
+
+      function formatMat2(m) {
+        return (
+          "[[" +
+          m[0][0].toFixed(5) + ", " + m[0][1].toFixed(5) + "], [" +
+          m[1][0].toFixed(5) + ", " + m[1][1].toFixed(5) + "]]"
+        );
+      }
+
+      function formatVec2(v) {
+        return "[" + v[0].toFixed(5) + ", " + v[1].toFixed(5) + "]";
+      }
+
+      function computeGradientsForSample(sample, params) {
+        const error = [
+          sample.z2[0] - sample.yTrue[0],
+          sample.z2[1] - sample.yTrue[1],
+        ];
+
+        const dW2 = [
+          [sample.h[0] * error[0], sample.h[0] * error[1]],
+          [sample.h[1] * error[0], sample.h[1] * error[1]],
+        ];
+        const dB2 = [error[0], error[1]];
+
+        const dH = [
+          error[0] * params.w2[0][0] + error[1] * params.w2[0][1],
+          error[0] * params.w2[1][0] + error[1] * params.w2[1][1],
+        ];
+        const dZ1 = [
+          dH[0] * sigmoidPrimeFromSigmoid(sample.h[0]),
+          dH[1] * sigmoidPrimeFromSigmoid(sample.h[1]),
+        ];
+        const dW1 = [
+          [sample.x[0] * dZ1[0], sample.x[0] * dZ1[1]],
+          [sample.x[1] * dZ1[0], sample.x[1] * dZ1[1]],
+        ];
+        const dB1 = [dZ1[0], dZ1[1]];
+
+        return { dW1, dB1, dW2, dB2 };
+      }
+
+      function computeAndRenderGradients() {
+        if (!state.params || state.samples.length === 0) {
+          return;
+        }
+        state.samples.forEach((sample, i) => {
+          const g = computeGradientsForSample(sample, state.params);
+          setText("gw1_" + i, formatMat2(g.dW1));
+          setText("gb1_" + i, formatVec2(g.dB1));
+          setText("gw2_" + i, formatMat2(g.dW2));
+          setText("gb2_" + i, formatVec2(g.dB2));
+        });
+      }
+
+      function toggleErrorVisibility() {
+        const show = document.getElementById("toggle-error").checked;
+        document.querySelectorAll(".error-col").forEach((el) => {
+          if (show) {
+            el.classList.remove("hidden");
+          } else {
+            el.classList.add("hidden");
+          }
+        });
+      }
+
+      function toggleDarkMode() {
+        const on = document.getElementById("toggle-dark").checked;
+        if (on) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      }
+
+      document.getElementById("randomize").addEventListener("click", randomizeAll);
+      document.getElementById("compute-grads").addEventListener("click", computeAndRenderGradients);
+      document.getElementById("toggle-error").addEventListener("change", toggleErrorVisibility);
+      document.getElementById("toggle-dark").addEventListener("change", toggleDarkMode);
+      randomizeAll();
+      toggleErrorVisibility();
+      toggleDarkMode();
+    </script>
+  </body>
+</html>
