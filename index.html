@@ -195,6 +195,20 @@
       .grad-table td {
         font-size: 12px;
       }
+      .col-toggles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+        font-family: "IBM Plex Sans", "Helvetica", "Arial", sans-serif;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .col-toggles label {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+      }
       .credit {
         margin: 16px 24px 32px;
         text-align: center;
@@ -446,39 +460,48 @@
             </tr>
           </tbody>
         </table>
+        <div class="col-toggles" aria-label="Gradient column toggles">
+          <label><input type="checkbox" data-col="dx" checked /> dE/dx</label>
+          <label><input type="checkbox" data-col="w1" checked /> dE/dW1</label>
+          <label><input type="checkbox" data-col="b1" checked /> dE/db1</label>
+          <label><input type="checkbox" data-col="dz1" checked /> dE/dz1</label>
+          <label><input type="checkbox" data-col="dh" checked /> dE/dh</label>
+          <label><input type="checkbox" data-col="w2" checked /> dE/dW2</label>
+          <label><input type="checkbox" data-col="b2" checked /> dE/db2</label>
+        </div>
         <table class="grad-table" aria-label="Per-sample gradients" style="margin-top: 10px;">
           <thead>
             <tr>
               <th>sample</th>
-              <th>Layer 1 input dE/dx</th>
-              <th>Layer 1 dE/dW (W1)</th>
-              <th>Layer 1 dE/db (b1)</th>
-              <th>Activation dE/dz1</th>
-              <th>Layer 2 input dE/dx (dE/dh)</th>
-              <th>Layer 2 dE/dW (W2)</th>
-              <th>Layer 2 dE/db (b2)</th>
+              <th class="col-dx">Layer 1 input dE/dx</th>
+              <th class="col-w1">Layer 1 dE/dW (W1)</th>
+              <th class="col-b1">Layer 1 dE/db (b1)</th>
+              <th class="col-dz1">Activation dE/dz1</th>
+              <th class="col-dh">Layer 2 input dE/dx (dE/dh)</th>
+              <th class="col-w2">Layer 2 dE/dW (W2)</th>
+              <th class="col-b2">Layer 2 dE/db (b2)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>0</td>
-              <td id="dx_0">[0,0]</td>
-              <td id="gw1_0">[[0,0],[0,0]]</td>
-              <td id="gb1_0">[0,0]</td>
-              <td id="dz1_0">[0,0]</td>
-              <td id="dh_0">[0,0]</td>
-              <td id="gw2_0">[[0,0],[0,0]]</td>
-              <td id="gb2_0">[0,0]</td>
+              <td id="dx_0" class="col-dx">[0,0]</td>
+              <td id="gw1_0" class="col-w1">[[0,0],[0,0]]</td>
+              <td id="gb1_0" class="col-b1">[0,0]</td>
+              <td id="dz1_0" class="col-dz1">[0,0]</td>
+              <td id="dh_0" class="col-dh">[0,0]</td>
+              <td id="gw2_0" class="col-w2">[[0,0],[0,0]]</td>
+              <td id="gb2_0" class="col-b2">[0,0]</td>
             </tr>
             <tr>
               <td>1</td>
-              <td id="dx_1">[0,0]</td>
-              <td id="gw1_1">[[0,0],[0,0]]</td>
-              <td id="gb1_1">[0,0]</td>
-              <td id="dz1_1">[0,0]</td>
-              <td id="dh_1">[0,0]</td>
-              <td id="gw2_1">[[0,0],[0,0]]</td>
-              <td id="gb2_1">[0,0]</td>
+              <td id="dx_1" class="col-dx">[0,0]</td>
+              <td id="gw1_1" class="col-w1">[[0,0],[0,0]]</td>
+              <td id="gb1_1" class="col-b1">[0,0]</td>
+              <td id="dz1_1" class="col-dz1">[0,0]</td>
+              <td id="dh_1" class="col-dh">[0,0]</td>
+              <td id="gw2_1" class="col-w2">[[0,0],[0,0]]</td>
+              <td id="gb2_1" class="col-b2">[0,0]</td>
             </tr>
           </tbody>
         </table>
@@ -689,6 +712,25 @@
         }
       }
 
+      function toggleGradientColumn(col, show) {
+        document.querySelectorAll(".col-" + col).forEach((el) => {
+          if (show) {
+            el.classList.remove("hidden");
+          } else {
+            el.classList.add("hidden");
+          }
+        });
+      }
+
+      function initGradientColumnToggles() {
+        document.querySelectorAll(".col-toggles input[data-col]").forEach((cb) => {
+          cb.addEventListener("change", () => {
+            toggleGradientColumn(cb.dataset.col, cb.checked);
+          });
+          toggleGradientColumn(cb.dataset.col, cb.checked);
+        });
+      }
+
       document.getElementById("randomize").addEventListener("click", randomizeAll);
       document.getElementById("compute-grads").addEventListener("click", computeAndRenderGradients);
       document.getElementById("toggle-error").addEventListener("change", toggleErrorVisibility);
@@ -696,6 +738,7 @@
       randomizeAll();
       toggleErrorVisibility();
       toggleDarkMode();
+      initGradientColumnToggles();
     </script>
   </body>
 </html>
