@@ -399,26 +399,28 @@
         </svg>
         <p class="note">Edges are labeled with weights; biases are shown as separate nodes feeding each neuron.</p>
         <div class="formula">
-          dL/dz2 = mse_prime(y_true, z2) = z2 - y_true
+          dE/dz2 = mse_prime(y_true, z2) = z2 - y_true
         </div>
         <div class="controls">
           <button class="btn" id="randomize">Randomize weights/biases</button>
           <button class="btn" id="compute-grads">Compute gradients (per sample)</button>
           <label class="toggle">
             <input type="checkbox" id="toggle-error" checked />
-            show dL/dz2
+            show dE/dz2
           </label>
           <span class="note">Also refreshes y_true and z2 values.</span>
         </div>
-        <table aria-label="Per-sample forward outputs and dL/dz2" style="margin-top: 10px;">
+        <table aria-label="Per-sample forward outputs and dE/dz2" style="margin-top: 10px;">
           <thead>
             <tr>
               <th>sample</th>
               <th>x1</th>
               <th>x2</th>
+              <th>z1</th>
+              <th>h (activation)</th>
               <th>y_true (target)</th>
               <th>z2 (output)</th>
-              <th class="error-col">dL/dz2</th>
+              <th class="error-col">dE/dz2</th>
             </tr>
           </thead>
           <tbody>
@@ -426,6 +428,8 @@
               <td>0</td>
               <td id="x_0_0">0.00</td>
               <td id="x_0_1">0.00</td>
+              <td id="z1_0">[0, 0]</td>
+              <td id="h_0">[0, 0]</td>
               <td id="ytrue_0">[1, 0]</td>
               <td id="yout_0">[0.28496, 0.13220]</td>
               <td id="err_0" class="error-col">[-0.71504, 0.13220]</td>
@@ -434,6 +438,8 @@
               <td>1</td>
               <td id="x_1_0">0.00</td>
               <td id="x_1_1">0.00</td>
+              <td id="z1_1">[0, 0]</td>
+              <td id="h_1">[0, 0]</td>
               <td id="ytrue_1">[1, 0]</td>
               <td id="yout_1">[0.30508, 0.13681]</td>
               <td id="err_1" class="error-col">[-0.69492, 0.13681]</td>
@@ -444,24 +450,33 @@
           <thead>
             <tr>
               <th>sample</th>
-              <th>Layer 1 dL/dW (W1)</th>
-              <th>Layer 1 dL/db (b1)</th>
-              <th>Layer 2 dL/dW (W2)</th>
-              <th>Layer 2 dL/db (b2)</th>
+              <th>Layer 1 input dE/dx</th>
+              <th>Layer 1 dE/dW (W1)</th>
+              <th>Layer 1 dE/db (b1)</th>
+              <th>Activation dE/dz1</th>
+              <th>Layer 2 input dE/dx (dE/dh)</th>
+              <th>Layer 2 dE/dW (W2)</th>
+              <th>Layer 2 dE/db (b2)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>0</td>
+              <td id="dx_0">[0,0]</td>
               <td id="gw1_0">[[0,0],[0,0]]</td>
               <td id="gb1_0">[0,0]</td>
+              <td id="dz1_0">[0,0]</td>
+              <td id="dh_0">[0,0]</td>
               <td id="gw2_0">[[0,0],[0,0]]</td>
               <td id="gb2_0">[0,0]</td>
             </tr>
             <tr>
               <td>1</td>
+              <td id="dx_1">[0,0]</td>
               <td id="gw1_1">[[0,0],[0,0]]</td>
               <td id="gb1_1">[0,0]</td>
+              <td id="dz1_1">[0,0]</td>
+              <td id="dh_1">[0,0]</td>
               <td id="gw2_1">[[0,0],[0,0]]</td>
               <td id="gb2_1">[0,0]</td>
             </tr>
@@ -571,6 +586,8 @@
           ];
           setText("x_" + i + "_0", x[0].toFixed(2));
           setText("x_" + i + "_1", x[1].toFixed(2));
+          setText("z1_" + i, "[" + fp.z1[0].toFixed(5) + ", " + fp.z1[1].toFixed(5) + "]");
+          setText("h_" + i, "[" + fp.h[0].toFixed(5) + ", " + fp.h[1].toFixed(5) + "]");
           setText("ytrue_" + i, "[" + yTrue.join(", ") + "]");
           setText("yout_" + i, "[" + yOut[0].toFixed(5) + ", " + yOut[1].toFixed(5) + "]");
           setText("err_" + i, "[" + err.join(", ") + "]");
@@ -628,7 +645,12 @@
         ];
         const dB1 = [dZ1[0], dZ1[1]];
 
-        return { dW1, dB1, dW2, dB2 };
+        const dX = [
+          dZ1[0] * params.w1[0][0] + dZ1[1] * params.w1[0][1],
+          dZ1[0] * params.w1[1][0] + dZ1[1] * params.w1[1][1],
+        ];
+
+        return { dW1, dB1, dW2, dB2, dH, dZ1, dX };
       }
 
       function computeAndRenderGradients() {
@@ -637,10 +659,13 @@
         }
         state.samples.forEach((sample, i) => {
           const g = computeGradientsForSample(sample, state.params);
+          setText("dh_" + i, formatVec2(g.dH));
+          setText("dz1_" + i, formatVec2(g.dZ1));
           setText("gw1_" + i, formatMat2(g.dW1));
           setText("gb1_" + i, formatVec2(g.dB1));
           setText("gw2_" + i, formatMat2(g.dW2));
           setText("gb2_" + i, formatVec2(g.dB2));
+          setText("dx_" + i, formatVec2(g.dX));
         });
       }
 
