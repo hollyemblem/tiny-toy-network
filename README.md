@@ -4,7 +4,7 @@ This document describes the purpose and usage of the Tiny Toy Network.
 
 ## What it is
 `index.html` is a standalone interactive visualization for a tiny fully
-connected network with a sigmoid activation between layers. The goal is to have a network small enough where I can apply backpropagation by hand, thus helping with memory retention fo the topic.
+connected network with a sigmoid activation between layers. The goal is to have a network small enough where I can apply backpropagation by hand, thus helping with memory retention for the topic. I hope it is useful for you too!
 
 The network has:
 
@@ -22,6 +22,7 @@ The network has:
 ## Math conventions
 - Forward pass uses row vectors: `z2 = h @ W2 + b2`
 - Loss uses mean-squared error per sample: `E = 0.5 * sum((z2 - y)^2)`
+- Note, dE/b is dE/dy
 - Backprop uses:
   - `dE/dz2 = z2 - y`
   - `dE/dW2 = h^T * dE/dz2`
