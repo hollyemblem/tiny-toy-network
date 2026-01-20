@@ -506,6 +506,17 @@
           </tbody>
         </table>
       </section>
+      <section class="card">
+        <h2>Backprop Cheat Sheet</h2>
+        <p class="note">Row-vector convention (1x2) matching the Python shapes.</p>
+        <div class="formula">z2 = h @ W2 + b2</div>
+        <div class="formula">dE/dz2 = z2 - y</div>
+        <div class="formula">dE/dW2 = h^T * dE/dz2 (so we get to 1x2 * 2x2)</div>
+        <div class="formula">dE/dh = dE/dz2 @ W2^T</div>
+        <div class="formula">dE/dz1 = dE/dh * sigmoid'(z1)</div>
+        <div class="formula">dE/dW1 = x^T * dE/dz1</div>
+        <div class="formula">dE/dx = dE/dz1 @ W1^T</div>
+      </section>
       <p class="credit">Inspired by Math for Deep Learning by Ronald T. Kneusel. <a href="https://github.com/rkneusel9/MathForDeepLearning">Git Repo</a></p>
     </main>
     <script>
