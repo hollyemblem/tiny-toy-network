@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Iris NN: Weights, Biases, and Graph</title>
+    <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/hollyemblem/tiny-toy-network/2a03eec79bb609684cd0ac924b7233b06bca8ec7/favicon.svg" />
     <style>
       :root {
         --bg: #f6f3ee;
@@ -511,7 +512,7 @@
         <p class="note">Row-vector convention (1x2) matching the Python shapes.</p>
         <div class="formula">z2 = h @ W2 + b2</div>
         <div class="formula">dE/dz2 = z2 - y</div>
-        <div class="formula">dE/dW2 = h^T * dE/dz2 (so we get to 1x2 * 2x2)</div>
+        <div class="formula">dE/dW2 = h^T * dE/dz2 (so we get to 2x1 @ 1x2 )</div>
         <div class="formula">dE/dh = dE/dz2 @ W2^T</div>
         <div class="formula">dE/dz1 = dE/dh * sigmoid'(z1)</div>
         <div class="formula">dE/dW1 = x^T * dE/dz1</div>
