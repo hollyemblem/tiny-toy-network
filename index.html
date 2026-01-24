@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Iris NN: Weights, Biases, and Graph</title>
+    <title>Tiny Toy Network: Weights, Biases, and Graph</title>
     <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/hollyemblem/tiny-toy-network/2a03eec79bb609684cd0ac924b7233b06bca8ec7/favicon.svg" />
     <style>
       :root {
@@ -57,6 +57,26 @@
         margin: 0;
         font-size: clamp(24px, 3.5vw, 36px);
         letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .title-icon {
+        width: 32px;
+        height: 32px;
+        display: inline-block;
+        border-radius: 8px;
+        background: var(--panel-header);
+        border: 1px solid var(--grid);
+        transition: transform 180ms ease;
+        transform-origin: 50% 55%;
+      }
+      .title-icon svg {
+        width: 100%;
+        height: 100%;
+      }
+      header h1:hover .title-icon {
+        transform: rotate(-8deg);
       }
       header p {
         margin: 8px 0 0;
@@ -153,6 +173,15 @@
         border-radius: 8px;
         margin-top: 12px;
         font-size: 13px;
+      }
+      .cheatsheet-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+        margin-top: 10px;
+      }
+      .cheatsheet-grid .formula {
+        margin-top: 0;
       }
       .controls {
         display: flex;
@@ -253,11 +282,79 @@
           font-size: 11px;
         }
       }
+    .backprop-section {
+        margin-top: 14px;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--grid);
+        background: linear-gradient(145deg, var(--paper) 0%, var(--panel) 100%);
+        display: grid;
+        gap: 12px;
+      }
+      .backprop-card {
+        background: var(--panel);
+        border: 1px solid var(--grid);
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.02);
+      }
+      .backprop-card h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+      .flow-list {
+        list-style: none;
+        padding: 0;
+        margin: 8px 0 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-family: "IBM Plex Mono", "Courier New", monospace;
+        font-size: 13px;
+      }
+      .flow-list li {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px dashed var(--grid);
+        background: var(--panel-header);
+      }
+      .flow-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px dashed var(--grid);
+        background: var(--panel-header);
+        font-family: "IBM Plex Mono", "Courier New", monospace;
+        font-size: 12px;
+        color: var(--ink);
+      }
+      .flow-arrow {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
     </style>
   </head>
   <body>
     <header>
-      <h1>Tiny Toy Network</h1>
+      <h1>
+        <span class="title-icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64" role="img" focusable="false">
+            <rect x="8" y="10" width="48" height="40" rx="10" fill="#fffdf8" stroke="#1a1a1a" stroke-width="2"></rect>
+            <circle cx="24" cy="30" r="6" fill="#b24c39"></circle>
+            <circle cx="40" cy="30" r="6" fill="#1f5f5b"></circle>
+            <rect x="26" y="42" width="12" height="4" rx="2" fill="#1a1a1a"></rect>
+            <rect x="30" y="4" width="4" height="8" rx="2" fill="#1a1a1a"></rect>
+            <circle cx="32" cy="6" r="3" fill="#b24c39"></circle>
+          </svg>
+        </span>
+        Tiny Toy Network
+      </h1>
       <p>Creating a randomised feed-forward network to practice back propagation.</p>
       <div class="controls header-controls">
         <label class="toggle">
@@ -510,14 +607,38 @@
       <section class="card">
         <h2>Backprop Cheat Sheet</h2>
         <p class="note">Row-vector convention (1x2) matching the Python shapes.</p>
-        <div class="formula">z2 = h @ W2 + b2</div>
-        <div class="formula">dE/dz2 = z2 - y</div>
-        <div class="formula">dE/dW2 = h^T * dE/dz2 (so we get to 2x1 @ 1x2 )</div>
-        <div class="formula">dE/dh = dE/dz2 @ W2^T</div>
-        <div class="formula">dE/dz1 = dE/dh * sigmoid'(z1)</div>
-        <div class="formula">dE/dW1 = x^T * dE/dz1</div>
-        <div class="formula">dE/dx = dE/dz1 @ W1^T</div>
-      </section>
+        <div class="cheatsheet-grid">
+          <div class="formula">z2 = h @ W2 + b2</div>
+          <div class="formula">dE/dz2 = z2 - y</div>
+          <div class="formula">dE/dW2 = h^T * dE/dz2 (so we get to 2x1 @ 1x2 )</div>
+          <div class="formula">dE/dh = dE/dz2 @ W2^T</div>
+          <div class="formula">dE/dz1 = dE/dh * sigmoid'(z1). Sigmoid derivative is sigmoid(x)(1-sigmoid(x))</div>
+          <div class="formula">dE/dW1 = x^T * dE/dz1</div>
+          <div class="formula">dE/dx = dE/dz1 @ W1^T</div>
+        </div>
+        </section>
+        <section class="card">
+        <h2>Passing errors through the network</h3>
+        <div class="backprop-section">
+          <div class="backprop-card">
+            <p class="note">To pass the error back down the model, we calculate how the error term changes with a change to input of a layer using how the error changes with a change to a layer's output.</p>
+            <p class="note">In this network, the order would be</p>
+            <ul class="flow-list">
+              <li> dE/dx
+                 <span class="flow-arrow"><-</span> dE/dz1
+                <span class="flow-arrow"><-</span> dE/dh
+                <span class="flow-arrow"><-</span> dE/dz2
+              </li>
+            </ul>
+          </div>
+          <div class="backprop-card">
+            <h3>What about for W and b?</h3>
+            <p class="note">Recall that while the above tells us how to pass the error term backward, the goal of backprop is to calculate how changes to <i>W</i> and <i>b</i> affect the error.</p>
+            <p class="flow-note"><strong>Why is dE/db = dE/dz?</strong> dE/db = dE/dy*dy//db = dE/dy * d(Wx+b)/db = dE/dy * (0+1)</p>
+            <p class="flow-note"><strong>Why is dE/dW = x^T * dE/dz?</strong> dE/dW = dE/dy * dy/dW = dE/dy * d(Wx+b)/dW = dE/dy * (x^t+0) = dE/dy * x^t</p>
+          </div>
+        </div>
+       </section>
       <p class="credit">Inspired by Math for Deep Learning by Ronald T. Kneusel. <a href="https://github.com/rkneusel9/MathForDeepLearning">Git Repo</a></p>
     </main>
     <script>
